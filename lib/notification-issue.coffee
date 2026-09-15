@@ -15,7 +15,7 @@ class NotificationIssue
 
   findSimilarIssues: ->
     repoUrl = @getRepoUrl()
-    repoUrl = 'atom/atom' unless repoUrl?
+    repoUrl = 'atomeditor-io/atom' unless repoUrl?
     repo = repoUrl.replace /http(s)?:\/\/(\d+\.)?github.com\//gi, ''
     issueTitle = @getIssueTitle()
     query = "#{issueTitle} repo:#{repo}"
@@ -48,12 +48,16 @@ class NotificationIssue
         body: "url=#{encodeURIComponent(issueUrl)}"
       }
       .then (r) -> r.text()
-      .catch (e) -> null
+      .then (shortUrl) ->
+        # is.gd returns an error message (not a URL) when it cannot shorten the
+        # URL, so only trust the response if it actually looks like a short URL.
+        if /^https?:\/\/\S+/.test(shortUrl.trim()) then shortUrl.trim() else issueUrl
+      .catch (e) -> issueUrl
 
   getIssueUrl: ->
     @getIssueBody().then (issueBody) =>
       repoUrl = @getRepoUrl()
-      repoUrl = 'https://github.com/atom/atom' unless repoUrl?
+      repoUrl = 'https://github.com/atomeditor-io/atom' unless repoUrl?
       "#{repoUrl}/issues/new?title=#{@encodeURI(@getIssueTitle())}&body=#{@encodeURI(issueBody)}"
 
   encodeURI: (str) ->
@@ -102,9 +106,9 @@ class NotificationIssue
 
         @issueBody = """
           <!--
-          Have you read Atom's Code of Conduct? By filing an Issue, you are expected to comply with it, including treating everyone with respect: https://github.com/atom/.github/blob/master/CODE_OF_CONDUCT.md
+          Have you read Atom's Code of Conduct? By filing an Issue, you are expected to comply with it, including treating everyone with respect: https://github.com/atomeditor-io/atom/blob/master/CODE_OF_CONDUCT.md
 
-          Do you want to ask a question? Are you looking for support? The Atom message board is the best place for getting support: https://discuss.atom.io
+          Do you want to ask a question? Are you looking for support? Discussions is the best place for getting support: https://github.com/atomeditor-io/atom/discussions
           -->
 
           ### Prerequisites
@@ -114,7 +118,7 @@ class NotificationIssue
               * Followed all applicable steps in the debugging guide: <https://flight-manual.atom.io/hacking-atom/sections/debugging/>
               * Checked the FAQs on the message board for common solutions: <https://discuss.atom.io/c/faq>
               * Checked that your issue isn't already filed: <https://github.com/issues?q=is%3Aissue+user%3Aatom>
-              * Checked that there is not already an Atom package that provides the described functionality: <https://atom.io/packages>
+              * Checked that there is not already an Atom package that provides the described functionality: <https://atomeditor.io/packages>
 
           ### Description
 
@@ -191,7 +195,7 @@ class NotificationIssue
           repo = JSON.parse(fs.readFileSync(path.join(packagePath, 'package.json')))?.repository
           repoUrl = repo?.url ? repo
 
-    repoUrl?.replace(/\.git$/, '').replace(/^git\+/, '')
+    repoUrl?.replace(/\.git$/, '').replace(/^git\+/, '').replace(/^https:\/\/github\.com\/atom\/(?=[^/]+\/?$)/, 'https://github.com/atomeditor-io/')
 
   getPackageNameFromFilePath: (filePath) ->
     return unless filePath
